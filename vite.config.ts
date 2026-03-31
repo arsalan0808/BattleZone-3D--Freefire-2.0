@@ -32,7 +32,7 @@ export default defineConfig({
         display: 'standalone',
         scope: '/',
         start_url: '/',
-        orientation: 'landscape',
+        orientation: 'portrait',
         categories: ['games'],
         screenshots: [
           {

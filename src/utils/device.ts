@@ -53,3 +53,29 @@ export const supportsWebGL = () => {
     return false
   }
 }
+
+export const lockPortraitOrientation = async () => {
+  if (typeof window === 'undefined' || typeof screen === 'undefined') return
+
+  type ScreenLockMode =
+    | 'any'
+    | 'natural'
+    | 'landscape'
+    | 'portrait'
+    | 'portrait-primary'
+    | 'portrait-secondary'
+    | 'landscape-primary'
+    | 'landscape-secondary'
+
+  const orientation = screen.orientation as ScreenOrientation & {
+    lock?: (orientation: ScreenLockMode) => Promise<void>
+  }
+
+  if (!orientation?.lock) return
+
+  try {
+    await orientation.lock('portrait-primary')
+  } catch {
+    // Ignore browsers/platforms that don't allow orientation locking.
+  }
+}

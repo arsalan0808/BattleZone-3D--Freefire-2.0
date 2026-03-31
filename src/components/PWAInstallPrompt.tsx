@@ -192,21 +192,28 @@ const Banner = ({
   onDismiss: () => void
 }) => (
   <motion.div
-    className="fixed left-1/2 top-4 z-50 w-[min(100vw-1.5rem,26rem)] -translate-x-1/2"
+    className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:left-1/2 sm:right-auto sm:top-4 sm:w-[min(100vw-2rem,26rem)] sm:-translate-x-1/2 sm:px-0 sm:pt-0"
+    style={{
+      paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+      paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+      paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
+    }}
     initial={{ opacity: 0, y: -24, scale: 0.96 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
     exit={{ opacity: 0, y: -24, scale: 0.96 }}
     transition={{ duration: 0.28 }}
   >
-    <div className="glass-panel premium-panel rounded-2xl border border-amber-300/35 p-4 shadow-[0_0_28px_rgba(251,146,60,0.22)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-100">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-200">{body}</p>
-      <div className="mt-4 flex gap-2">
+    <div className="glass-panel premium-panel mx-auto w-full max-w-[26rem] rounded-2xl border border-amber-300/35 p-3.5 shadow-[0_0_28px_rgba(251,146,60,0.22)] sm:p-4">
+      <p className="pr-2 text-[0.68rem] font-semibold uppercase leading-4 tracking-[0.22em] text-amber-100 sm:text-xs sm:tracking-[0.28em]">
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-5 text-slate-200 sm:leading-6">{body}</p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
           data-ui-control="true"
           onClick={onPrimary}
-          className="glow-button flex-1 py-2 text-sm font-semibold uppercase tracking-[0.18em]"
+          className="glow-button w-full px-4 py-3 text-[0.76rem] font-semibold uppercase tracking-[0.14em] sm:flex-1 sm:text-sm sm:tracking-[0.18em]"
         >
           {primaryLabel}
         </button>
@@ -214,7 +221,7 @@ const Banner = ({
           type="button"
           data-ui-control="true"
           onClick={onDismiss}
-          className="glass-button flex-1 py-2 text-sm font-semibold uppercase tracking-[0.18em]"
+          className="glass-button w-full px-4 py-3 text-[0.76rem] font-semibold uppercase tracking-[0.14em] sm:flex-1 sm:text-sm sm:tracking-[0.18em]"
         >
           Dismiss
         </button>
