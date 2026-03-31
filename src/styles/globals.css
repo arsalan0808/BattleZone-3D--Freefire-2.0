@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Syncopate:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border select-none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-primary text-white;
+    font-family: 'Rajdhani', sans-serif;
+    background:
+      radial-gradient(circle at top, rgba(255, 179, 71, 0.12), transparent 30%),
+      linear-gradient(180deg, #05070d 0%, #09111e 100%);
+    /* Support for notch/cutout */
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Syncopate', sans-serif;
+  }
+
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+    /* Ensure buttons are easily tappable on mobile */
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-specific fixes */
+  @media (max-width: 640px) {
+    html,
+    body,
+    #root {
+      font-size: 14px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* Prevent input zoom on focus */
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-2xl border border-white/10 bg-white/[0.08] backdrop-blur-xl;
+  }
+
+  .premium-panel {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 14px 40px rgba(4, 10, 20, 0.48),
+      0 0 0 1px rgba(148, 163, 184, 0.03);
+  }
+
+  .glass-button {
+    @apply rounded-2xl border border-white/20 bg-white/10 px-6 py-3 text-white transition-all duration-200 hover:bg-white/[0.16];
+    box-shadow: 0 10px 26px rgba(4, 10, 20, 0.28);
+  }
+
+  .glow-button {
+    @apply rounded-2xl border border-amber-200/30 px-6 py-3 font-semibold text-slate-950 transition-all duration-200;
+    background: linear-gradient(135deg, #fde68a 0%, #fb923c 52%, #f97316 100%);
+    box-shadow:
+      0 12px 30px rgba(249, 115, 22, 0.35),
+      0 0 18px rgba(251, 191, 36, 0.32);
+  }
+
+  .glow-accent {
+    @apply text-amber-200;
+    text-shadow: 0 0 18px rgba(251, 191, 36, 0.35);
+  }
+
+  /* Mobile-friendly touch target sizes */
+  .touch-target {
+    @apply min-h-[2.75rem] min-w-[2.75rem];
+  }
+
+  /* Responsive spacing for mobile */
+  .mobile-px {
+    @apply px-3 sm:px-4 md:px-6;
+  }
+
+  .mobile-py {
+    @apply py-2 sm:py-3 md:py-4;
+  }
+
+  /* Improved safe area with proper fallbacks */
+  .mobile-safe-area {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  /* Mobile-optimized buttons */
+  .mobile-button {
+    @apply touch-target rounded-xl border border-transparent px-4 py-2.5 font-semibold transition-all duration-200 sm:px-6 sm:py-3;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-button-primary {
+    @apply mobile-button bg-amber-500/90 text-slate-950 hover:bg-amber-400 active:scale-95 sm:bg-amber-500;
+  }
+
+  .mobile-button-secondary {
+    @apply mobile-button border-white/20 bg-white/10 text-white hover:bg-white/[0.16];
+  }
+
+  /* Responsive text sizing */
+  .text-mobile {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-mobile-lg {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .text-mobile-xl {
+    @apply text-2xl sm:text-3xl md:text-4xl;
+  }
+
+  .currency-pill {
+    @apply rounded-full border border-amber-200/20 bg-amber-300/10 px-2 py-1 font-semibold text-amber-100;
+  }
+
+  .currency-pill-blue {
+    @apply border-sky-200/20 bg-sky-300/10 text-sky-100;
+  }
+
+  .minimap-grid {
+    background:
+      linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(14, 21, 34, 0.96));
+    background-size: 1.75rem 1.75rem, 1.75rem 1.75rem, cover;
+  }
+
+  .health-shell {
+    @apply h-3 overflow-hidden rounded-full bg-slate-950/70;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .health-fill {
+    @apply h-full rounded-full;
+  }
+
+  .health-fill-player {
+    background: linear-gradient(90deg, #10b981 0%, #4ade80 60%, #bef264 100%);
+    box-shadow: 0 0 18px rgba(74, 222, 128, 0.55);
+  }
+
+  .health-fill-enemy {
+    background: linear-gradient(90deg, #fb7185 0%, #f97316 55%, #fbbf24 100%);
+    box-shadow: 0 0 18px rgba(249, 115, 22, 0.45);
+  }
+
+  .crosshair-shell {
+    position: relative;
+    width: 3.1rem;
+    height: 3.1rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+    box-shadow:
+      0 0 18px rgba(251, 191, 36, 0.18),
+      inset 0 0 14px rgba(255, 255, 255, 0.06);
+    opacity: 0.88;
+  }
+
+  .crosshair-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(90deg, transparent, rgba(255, 220, 160, 0.92), transparent);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+  }
+
+  .crosshair-line.horizontal {
+    width: 100%;
+    height: 1px;
+  }
+
+  .crosshair-line.vertical {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, rgba(255, 220, 160, 0.92), transparent);
+  }
+
+  .crosshair-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0.36rem;
+    height: 0.36rem;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: #fff7ed;
+    box-shadow: 0 0 14px rgba(255, 237, 213, 0.9);
+  }
+
+  .ammo-panel {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 12px 30px rgba(4, 10, 20, 0.45),
+      0 0 22px rgba(251, 146, 60, 0.15);
+  }
+
+  .deploy-row {
+    @apply flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
