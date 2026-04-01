@@ -42,7 +42,7 @@ export const usePWAServiceWorker = () => {
         void registration.update()
         const intervalId = window.setInterval(() => {
           void registration.update()
-        }, 60_000)
+        }, 30_000) // Check for updates every 30 seconds
 
         const cleanup = () => window.clearInterval(intervalId)
         window.addEventListener('beforeunload', cleanup, { once: true })

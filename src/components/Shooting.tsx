@@ -8,7 +8,10 @@ import { useGameStore } from '../store/gameStore'
 import { playerRef } from './Player'
 import { aiBotRef } from './AIBot'
 import { audioManager } from '../utils/audioManager'
+import { isGameplayUiTarget, isInMobileMovementZone } from '../utils/mobileInput'
 import type { AimingSystem } from '../systems/aiming/AimingSystem'
+
+const clamp01 = (value: number) => Math.max(0.02, Math.min(0.98, value))
 
 export const Shooting = () => {
   const { camera } = useThree()
@@ -24,10 +27,12 @@ export const Shooting = () => {
   const enemyCenterRef = useRef(new THREE.Vector3())
   const enemySizeRef = useRef(new THREE.Vector3())
   const reloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeShootPointerIdRef = useRef<number | null>(null)
   const lastShotTimeRef = useRef(0)
   const lastDamageAtRef = useRef(0)
   const killRegisteredRef = useRef(false)
   const aimingSystemRef = useRef<AimingSystem | null>(null)
+  const fireShotRef = useRef<() => boolean>(() => false)
 
   const isShootingInput = useGameStore((state) => state.isShootingInput)
   const currentScene = useGameStore((state) => state.currentScene)
@@ -59,30 +64,97 @@ export const Shooting = () => {
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
-      if (currentScene !== 'game') {
+      if (currentScene !== 'game' || isPaused) {
         return
       }
 
-      const target = event.target as HTMLElement | null
-      if (target?.closest('[data-ui-control="true"]')) {
+      if (isGameplayUiTarget(event.target)) {
         return
       }
 
+      if ((event.pointerType === 'mouse' || event.pointerType === 'pen') && event.button !== 0) {
+        return
+      }
+
+      if (
+        event.pointerType === 'touch' &&
+        isInMobileMovementZone(event.clientX, window.innerWidth)
+      ) {
+        return
+      }
+
+      if (
+        activeShootPointerIdRef.current !== null &&
+        activeShootPointerIdRef.current !== event.pointerId
+      ) {
+        return
+      }
+
+      const cursorPosition = {
+        x: clamp01(event.clientX / window.innerWidth),
+        y: clamp01(event.clientY / window.innerHeight),
+      }
+      const aimingSystem =
+        aimingSystemRef.current ??
+        (window as Window & { __aimingSystem?: AimingSystem }).__aimingSystem ??
+        null
+
+      activeShootPointerIdRef.current = event.pointerId
+      useGameStore.getState().setCursorPosition(cursorPosition)
+      aimingSystem?.update(cursorPosition)
       useGameStore.getState().setShootingInput(true)
+      fireShotRef.current()
     }
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (event: PointerEvent) => {
+      if (
+        activeShootPointerIdRef.current !== null &&
+        activeShootPointerIdRef.current !== event.pointerId
+      ) {
+        return
+      }
+
+      activeShootPointerIdRef.current = null
+      useGameStore.getState().setShootingInput(false)
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        return
+      }
+
+      activeShootPointerIdRef.current = null
+      useGameStore.getState().setShootingInput(false)
+    }
+
+    const handleWindowBlur = () => {
+      activeShootPointerIdRef.current = null
       useGameStore.getState().setShootingInput(false)
     }
 
     window.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
+    window.addEventListener('blur', handleWindowBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+      window.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [currentScene])
+  }, [currentScene, isPaused])
+
+  useEffect(() => {
+    if (currentScene === 'game' && !isPaused) {
+      return
+    }
+
+    activeShootPointerIdRef.current = null
+    useGameStore.getState().setShootingInput(false)
+  }, [currentScene, isPaused])
 
   useEffect(() => {
     if (!reloadTimeoutRef.current) {
@@ -206,6 +278,8 @@ export const Shooting = () => {
 
     return true
   }
+
+  fireShotRef.current = fireShot
 
   useFrame((_, delta) => {
     tickBulletTraces(delta)

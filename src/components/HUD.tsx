@@ -65,7 +65,7 @@ export const HUD = () => {
         )}
       </AnimatePresence>
 
-      <div className="pointer-events-none absolute inset-0 z-30 mobile-safe-area">
+      <div className="pointer-events-none fixed inset-0 z-30 mobile-safe-area">
         {/* Desktop Layout */}
         <motion.div
           className="mx-auto hidden sm:flex max-w-7xl items-start justify-between gap-3 px-1"
@@ -190,7 +190,11 @@ export const HUD = () => {
 
         {/* Mobile Health Bars - Top Right */}
         <motion.div
-          className="absolute top-1 right-1 sm:hidden flex flex-col gap-1 max-w-[11rem]"
+          className="absolute right-1 top-1 sm:hidden flex flex-col gap-1 max-w-[11rem]"
+          style={{
+            right: 'max(0.25rem, env(safe-area-inset-right))',
+            top: 'max(0.25rem, env(safe-area-inset-top))',
+          }}
           initial="hidden"
           animate="visible"
           variants={panelVariants}
@@ -228,7 +232,7 @@ export const HUD = () => {
         </motion.div>
 
         {/* Crosshair - Mobile */}
-        <div className="absolute inset-0 pointer-events-none sm:hidden z-40">
+        <div className="absolute inset-0 pointer-events-none sm:hidden z-40 flex items-center justify-center">
           {/* 🎯 Dynamic Mobile Crosshair - Follows Touch/Joystick */}
           <motion.div
             className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]"
@@ -354,7 +358,11 @@ export const HUD = () => {
 
         {/* Mobile Score, Ammo & Rifles - Left Side Column Above Joystick */}
         <motion.div
-          className="absolute bottom-32 sm:hidden left-1 flex flex-col items-start gap-1.5 max-w-[13rem] pointer-events-auto"
+          className="absolute sm:hidden left-1 flex flex-col items-start gap-1.5 max-w-[12rem] pointer-events-auto"
+          style={{
+            bottom: 'max(14rem, calc(env(safe-area-inset-bottom, 0px) + 14rem))',
+            left: 'max(0.25rem, env(safe-area-inset-left))',
+          }}
           initial="hidden"
           animate="visible"
           variants={panelVariants}

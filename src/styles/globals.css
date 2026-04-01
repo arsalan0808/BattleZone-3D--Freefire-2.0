@@ -19,6 +19,8 @@
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   body {
@@ -27,11 +29,8 @@
     background:
       radial-gradient(circle at top, rgba(255, 179, 71, 0.12), transparent 30%),
       linear-gradient(180deg, #05070d 0%, #09111e 100%);
-    /* Support for notch/cutout */
-    padding-top: max(0px, env(safe-area-inset-top));
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
-    padding-left: max(0px, env(safe-area-inset-left));
-    padding-right: max(0px, env(safe-area-inset-right));
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   h1,
@@ -51,26 +50,9 @@
 
   button {
     -webkit-tap-highlight-color: transparent;
-    /* Ensure buttons are easily tappable on mobile */
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Mobile-specific fixes */
-  @media (max-width: 640px) {
-    html,
-    body,
-    #root {
-      font-size: 14px;
-      -webkit-text-size-adjust: 100%;
-    }
-
-    /* Prevent input zoom on focus */
-    input,
-    select,
-    textarea {
-      font-size: 16px;
-    }
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
   }
 }
 
@@ -104,53 +86,11 @@
     text-shadow: 0 0 18px rgba(251, 191, 36, 0.35);
   }
 
-  /* Mobile-friendly touch target sizes */
-  .touch-target {
-    @apply min-h-[2.75rem] min-w-[2.75rem];
-  }
-
-  /* Responsive spacing for mobile */
-  .mobile-px {
-    @apply px-3 sm:px-4 md:px-6;
-  }
-
-  .mobile-py {
-    @apply py-2 sm:py-3 md:py-4;
-  }
-
-  /* Improved safe area with proper fallbacks */
   .mobile-safe-area {
     padding-top: max(0.75rem, env(safe-area-inset-top));
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
-  }
-
-  /* Mobile-optimized buttons */
-  .mobile-button {
-    @apply touch-target rounded-xl border border-transparent px-4 py-2.5 font-semibold transition-all duration-200 sm:px-6 sm:py-3;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-button-primary {
-    @apply mobile-button bg-amber-500/90 text-slate-950 hover:bg-amber-400 active:scale-95 sm:bg-amber-500;
-  }
-
-  .mobile-button-secondary {
-    @apply mobile-button border-white/20 bg-white/10 text-white hover:bg-white/[0.16];
-  }
-
-  /* Responsive text sizing */
-  .text-mobile {
-    @apply text-base sm:text-lg md:text-xl;
-  }
-
-  .text-mobile-lg {
-    @apply text-lg sm:text-xl md:text-2xl;
-  }
-
-  .text-mobile-xl {
-    @apply text-2xl sm:text-3xl md:text-4xl;
   }
 
   .currency-pill {

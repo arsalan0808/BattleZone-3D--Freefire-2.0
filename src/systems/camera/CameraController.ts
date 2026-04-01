@@ -14,6 +14,7 @@
  */
 
 import * as THREE from 'three'
+import { isGameplayUiTarget, isInMobileMovementZone } from '../../utils/mobileInput'
 
 export interface CameraConfig {
   // Position offsets
@@ -99,8 +100,12 @@ export class CameraController {
   // Input state
   private isRightClickDown: boolean = false
   private isTouching: boolean = false
+  private activeTouchPointerId: number | null = null
+  private activeTouchIdentifier: number | null = null
   private touchCurrentPos: { x: number; y: number } = { x: 0, y: 0 }
   private inertiaVelocity: { x: number; y: number } = { x: 0, y: 0 }
+  private readonly usePointerEvents: boolean =
+    typeof window !== 'undefined' && 'PointerEvent' in window
 
   // Game state
   private isAiming: boolean = false
@@ -114,6 +119,9 @@ export class CameraController {
   private readonly boundMouseDown = (event: MouseEvent) => this._handleMouseDown(event)
   private readonly boundMouseUp = (event: MouseEvent) => this._handleMouseUp(event)
   private readonly boundMouseWheel = (event: WheelEvent) => this._handleMouseWheel(event)
+  private readonly boundPointerDown = (event: PointerEvent) => this._handlePointerDown(event)
+  private readonly boundPointerMove = (event: PointerEvent) => this._handlePointerMove(event)
+  private readonly boundPointerUp = (event: PointerEvent) => this._handlePointerUp(event)
   private readonly boundTouchStart = (event: TouchEvent) => this._handleTouchStart(event)
   private readonly boundTouchMove = (event: TouchEvent) => this._handleTouchMove(event)
   private readonly boundTouchEnd = (event: TouchEvent) => this._handleTouchEnd(event)
@@ -143,10 +151,17 @@ export class CameraController {
     document.addEventListener('mouseup', this.boundMouseUp, false)
     document.addEventListener('wheel', this.boundMouseWheel, { passive: false })
 
-    // Mobile
-    document.addEventListener('touchstart', this.boundTouchStart, false)
-    document.addEventListener('touchmove', this.boundTouchMove, { passive: false })
-    document.addEventListener('touchend', this.boundTouchEnd, false)
+    if (this.usePointerEvents) {
+      document.addEventListener('pointerdown', this.boundPointerDown, false)
+      document.addEventListener('pointermove', this.boundPointerMove, { passive: false })
+      document.addEventListener('pointerup', this.boundPointerUp, false)
+      document.addEventListener('pointercancel', this.boundPointerUp, false)
+    } else {
+      document.addEventListener('touchstart', this.boundTouchStart, false)
+      document.addEventListener('touchmove', this.boundTouchMove, { passive: false })
+      document.addEventListener('touchend', this.boundTouchEnd, false)
+      document.addEventListener('touchcancel', this.boundTouchEnd, false)
+    }
 
     // Keyboard
     document.addEventListener('keydown', this.boundKeyDown, false)
@@ -196,56 +211,133 @@ export class CameraController {
   /**
    * ========== MOBILE INPUT ==========
    */
-  private _handleTouchStart(event: TouchEvent): void {
-    const target = event.target as HTMLElement | null
-    if (target?.closest('[data-ui-control="true"]')) {
+  private _handlePointerDown(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' || this.activeTouchPointerId !== null) {
       return
     }
 
-    if (event.touches.length === 1) {
+    if (
+      isGameplayUiTarget(event.target) ||
+      isInMobileMovementZone(event.clientX, window.innerWidth)
+    ) {
+      return
+    }
+
+    this.isTouching = true
+    this.activeTouchPointerId = event.pointerId
+    this.inertiaVelocity.x = 0
+    this.inertiaVelocity.y = 0
+    this.touchCurrentPos.x = event.clientX
+    this.touchCurrentPos.y = event.clientY
+  }
+
+  private _handlePointerMove(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' || this.activeTouchPointerId !== event.pointerId || !this.isTouching) {
+      return
+    }
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    const deltaX = event.clientX - this.touchCurrentPos.x
+    const deltaY = event.clientY - this.touchCurrentPos.y
+
+    this.touchCurrentPos.x = event.clientX
+    this.touchCurrentPos.y = event.clientY
+
+    const sensitivity = this.config.rotationSensitivity.mobile
+    this.targetRotation.horizontal += deltaX * sensitivity
+    this.targetRotation.vertical -= deltaY * sensitivity
+    this.targetRotation.vertical = THREE.MathUtils.clamp(
+      this.targetRotation.vertical,
+      -this.config.maxVerticalRotation,
+      this.config.maxVerticalRotation
+    )
+
+    this.inertiaVelocity.x = deltaX * sensitivity * 1.5
+    this.inertiaVelocity.y = deltaY * sensitivity * 1.5
+  }
+
+  private _handlePointerUp(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' || this.activeTouchPointerId !== event.pointerId) {
+      return
+    }
+
+    this.activeTouchPointerId = null
+    this.isTouching = false
+  }
+
+  private _handleTouchStart(event: TouchEvent): void {
+    if (this.usePointerEvents || this.activeTouchIdentifier !== null) {
+      return
+    }
+
+    for (const touch of Array.from(event.changedTouches)) {
+      if (
+        isGameplayUiTarget(event.target) ||
+        isInMobileMovementZone(touch.clientX, window.innerWidth)
+      ) {
+        continue
+      }
+
       this.isTouching = true
-      this.touchCurrentPos.x = event.touches[0].clientX
-      this.touchCurrentPos.y = event.touches[0].clientY
+      this.activeTouchIdentifier = touch.identifier
+      this.inertiaVelocity.x = 0
+      this.inertiaVelocity.y = 0
+      this.touchCurrentPos.x = touch.clientX
+      this.touchCurrentPos.y = touch.clientY
+      break
     }
   }
 
   private _handleTouchMove(event: TouchEvent): void {
-    if (event.touches.length === 1 && this.isTouching) {
-      const target = event.target as HTMLElement | null
-      if (target?.closest('[data-ui-control="true"]')) {
-        return
-      }
-
-      event.preventDefault()
-
-      const currentX = event.touches[0].clientX
-      const currentY = event.touches[0].clientY
-
-      const deltaX = currentX - this.touchCurrentPos.x
-      const deltaY = currentY - this.touchCurrentPos.y
-
-      this.touchCurrentPos.x = currentX
-      this.touchCurrentPos.y = currentY
-
-      const sensitivity = this.config.rotationSensitivity.mobile
-      this.targetRotation.horizontal += deltaX * sensitivity
-      this.targetRotation.vertical -= deltaY * sensitivity
-
-      // Clamp vertical
-      this.targetRotation.vertical = THREE.MathUtils.clamp(
-        this.targetRotation.vertical,
-        -this.config.maxVerticalRotation,
-        this.config.maxVerticalRotation
-      )
-
-      // Inertia
-      this.inertiaVelocity.x = deltaX * sensitivity * 1.5
-      this.inertiaVelocity.y = deltaY * sensitivity * 1.5
+    if (this.usePointerEvents || !this.isTouching || this.activeTouchIdentifier === null) {
+      return
     }
+
+    const activeTouch = Array.from(event.touches).find(
+      (touch) => touch.identifier === this.activeTouchIdentifier
+    )
+
+    if (!activeTouch) {
+      return
+    }
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    const deltaX = activeTouch.clientX - this.touchCurrentPos.x
+    const deltaY = activeTouch.clientY - this.touchCurrentPos.y
+
+    this.touchCurrentPos.x = activeTouch.clientX
+    this.touchCurrentPos.y = activeTouch.clientY
+
+    const sensitivity = this.config.rotationSensitivity.mobile
+    this.targetRotation.horizontal += deltaX * sensitivity
+    this.targetRotation.vertical -= deltaY * sensitivity
+    this.targetRotation.vertical = THREE.MathUtils.clamp(
+      this.targetRotation.vertical,
+      -this.config.maxVerticalRotation,
+      this.config.maxVerticalRotation
+    )
+
+    this.inertiaVelocity.x = deltaX * sensitivity * 1.5
+    this.inertiaVelocity.y = deltaY * sensitivity * 1.5
   }
 
   private _handleTouchEnd(event: TouchEvent): void {
-    if (event.touches.length === 0) {
+    if (this.usePointerEvents || this.activeTouchIdentifier === null) {
+      return
+    }
+
+    const touchStillActive = Array.from(event.touches).some(
+      (touch) => touch.identifier === this.activeTouchIdentifier
+    )
+
+    if (!touchStillActive) {
+      this.activeTouchIdentifier = null
       this.isTouching = false
     }
   }
@@ -510,9 +602,17 @@ export class CameraController {
     document.removeEventListener('mousedown', this.boundMouseDown)
     document.removeEventListener('mouseup', this.boundMouseUp)
     document.removeEventListener('wheel', this.boundMouseWheel)
-    document.removeEventListener('touchstart', this.boundTouchStart)
-    document.removeEventListener('touchmove', this.boundTouchMove)
-    document.removeEventListener('touchend', this.boundTouchEnd)
+    if (this.usePointerEvents) {
+      document.removeEventListener('pointerdown', this.boundPointerDown)
+      document.removeEventListener('pointermove', this.boundPointerMove)
+      document.removeEventListener('pointerup', this.boundPointerUp)
+      document.removeEventListener('pointercancel', this.boundPointerUp)
+    } else {
+      document.removeEventListener('touchstart', this.boundTouchStart)
+      document.removeEventListener('touchmove', this.boundTouchMove)
+      document.removeEventListener('touchend', this.boundTouchEnd)
+      document.removeEventListener('touchcancel', this.boundTouchEnd)
+    }
     document.removeEventListener('keydown', this.boundKeyDown)
   }
 }

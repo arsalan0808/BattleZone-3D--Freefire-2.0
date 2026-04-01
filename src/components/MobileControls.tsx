@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { WEAPON_ORDER, getWeaponConfig } from '../game/weapons'
 import { useGameStore } from '../store/gameStore'
@@ -15,6 +15,7 @@ export const MobileControls = () => {
   const togglePause = useGameStore((state) => state.togglePause)
   const setSelectedWeapon = useGameStore((state) => state.setSelectedWeapon)
   const requestReload = useGameStore((state) => state.requestReload)
+  const isPaused = useGameStore((state) => state.isPaused)
   const selectedWeapon = useGameStore((state) => state.selectedWeapon)
   const ammoInMagazine = useGameStore((state) => state.ammoInMagazine)
   const ammoReserve = useGameStore((state) => state.ammoReserve)
@@ -43,7 +44,10 @@ export const MobileControls = () => {
     const dx = clientX - centerX
     const dy = clientY - centerY
     const distance = Math.sqrt(dx * dx + dy * dy)
-    const clampedDistance = Math.min(distance, radius)
+    const rawIntensity = Math.min(distance / radius, 1)
+    const deadzone = 0.12
+    const intensity = rawIntensity <= deadzone ? 0 : (rawIntensity - deadzone) / (1 - deadzone)
+    const clampedDistance = intensity * radius
     const angle = Math.atan2(dy, dx)
     const normalizedX = (Math.cos(angle) * clampedDistance) / radius
     const normalizedY = (Math.sin(angle) * clampedDistance) / radius
@@ -63,6 +67,12 @@ export const MobileControls = () => {
     setMovementInput({ x: 0, z: 0 })
   }, [setMovementInput])
 
+  const releaseShooting = useCallback(() => {
+    shootPointerIdRef.current = null
+    setShootPressed(false)
+    setShootingInput(false)
+  }, [setShootingInput])
+
   const handleJoystickPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (joystickPointerIdRef.current !== null) return
     joystickPointerIdRef.current = event.pointerId
@@ -79,11 +89,15 @@ export const MobileControls = () => {
 
   const handleJoystickPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (joystickPointerIdRef.current !== event.pointerId) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
     releaseJoystick()
     triggerHaptic()
   }, [releaseJoystick])
 
   const handleShootPointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (shootPointerIdRef.current !== null) return
     shootPointerIdRef.current = event.pointerId
     event.currentTarget.setPointerCapture(event.pointerId)
     setShootPressed(true)
@@ -93,11 +107,43 @@ export const MobileControls = () => {
 
   const handleShootPointerUp = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
     if (shootPointerIdRef.current !== event.pointerId) return
-    shootPointerIdRef.current = null
-    setShootPressed(false)
-    setShootingInput(false)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    releaseShooting()
     triggerHaptic()
-  }, [setShootingInput])
+  }, [releaseShooting])
+
+  useEffect(() => {
+    if (!isPaused) {
+      return
+    }
+
+    releaseJoystick()
+    releaseShooting()
+  }, [isPaused, releaseJoystick, releaseShooting])
+
+  useEffect(() => {
+    const resetControls = () => {
+      releaseJoystick()
+      releaseShooting()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        resetControls()
+      }
+    }
+
+    window.addEventListener('blur', resetControls)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('blur', resetControls)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      resetControls()
+    }
+  }, [releaseJoystick, releaseShooting])
 
   const handleReload = useCallback(() => {
     const weaponConfig = getWeaponConfig(selectedWeapon)
@@ -113,21 +159,32 @@ export const MobileControls = () => {
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40"
-      style={{ height: 'max(12rem, calc(env(safe-area-inset-bottom, 0) + 12rem))' }}
+      style={{
+        height: `max(13rem, calc(env(safe-area-inset-bottom, 0px) + 13rem))`,
+        paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+        paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
+        paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
+      }}
     >
-      <div className="relative h-full w-full mobile-safe-area">
-        <div className="absolute bottom-3 left-3 pointer-events-auto sm:bottom-4 sm:left-4" data-ui-control="true">
+      <div className="relative h-full w-full">
+        <div className="absolute bottom-3 left-3 pointer-events-auto sm:bottom-4 sm:left-4" data-ui-control="true" style={{
+          bottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          left: 'max(0.75rem, env(safe-area-inset-left))',
+        }}>
           <motion.div
             ref={joystickRef}
             className="glass-panel premium-panel relative flex items-center justify-center rounded-full opacity-70 backdrop-blur-sm"
             style={{
               width: 'clamp(4.25rem, 18vw, 5.5rem)',
               height: 'clamp(4.25rem, 18vw, 5.5rem)',
+              touchAction: 'none',
+              userSelect: 'none',
             }}
             onPointerDown={handleJoystickPointerDown}
             onPointerMove={handleJoystickPointerMove}
             onPointerUp={handleJoystickPointerUp}
             onPointerCancel={handleJoystickPointerUp}
+            onLostPointerCapture={releaseJoystick}
             animate={{
               scale: joystickActive ? 1.05 : 1,
               boxShadow: joystickActive
@@ -152,7 +209,10 @@ export const MobileControls = () => {
           <p className="mt-1.5 text-center text-[9px] font-semibold uppercase tracking-[0.3em] text-slate-400">Move</p>
         </div>
 
-        <div className="absolute bottom-3 right-3 flex flex-col items-end gap-2 pointer-events-auto sm:bottom-4 sm:right-4" data-ui-control="true">
+        <div className="absolute bottom-3 right-3 flex flex-col items-end gap-2 pointer-events-auto sm:bottom-4 sm:right-4" data-ui-control="true" style={{
+          bottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          right: 'max(0.75rem, env(safe-area-inset-right))',
+        }}>
           <div className="flex gap-1">
             {WEAPON_ORDER.map((weaponId) => {
               const weapon = getWeaponConfig(weaponId)
@@ -181,6 +241,8 @@ export const MobileControls = () => {
                     fontSize: 'clamp(0.55rem, 2vw, 0.68rem)',
                     letterSpacing: '0.15em',
                     opacity: 0.7,
+                    touchAction: 'none',
+                    userSelect: 'none',
                   }}
                   whileTap={{ scale: 0.92, opacity: 1 }}
                 >
@@ -198,6 +260,7 @@ export const MobileControls = () => {
               onPointerDown={handleShootPointerDown}
               onPointerUp={handleShootPointerUp}
               onPointerCancel={handleShootPointerUp}
+              onLostPointerCapture={releaseShooting}
             />
             <ControlButton
               label={isReloading ? 'Load' : 'Reload'}
@@ -227,6 +290,7 @@ const ControlButton = ({
   onPointerDown,
   onPointerUp,
   onPointerCancel,
+  onLostPointerCapture,
 }: {
   label: string
   pressed?: boolean
@@ -236,6 +300,7 @@ const ControlButton = ({
   onPointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void
   onPointerUp?: (event: React.PointerEvent<HTMLButtonElement>) => void
   onPointerCancel?: (event: React.PointerEvent<HTMLButtonElement>) => void
+  onLostPointerCapture?: () => void
 }) => (
   <motion.button
     type="button"
@@ -245,19 +310,20 @@ const ControlButton = ({
     onPointerDown={onPointerDown}
     onPointerUp={onPointerUp}
     onPointerCancel={onPointerCancel}
+    onLostPointerCapture={onLostPointerCapture}
     className={`rounded-full border font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm ${
       accent ? 'border-amber-200/45 bg-amber-400/20' : 'border-white/10 bg-slate-950/45'
     } ${disabled ? 'opacity-45' : ''}`}
     style={{
-      width: 'clamp(2.75rem, 12vw, 3.75rem)',
-      height: 'clamp(2.75rem, 12vw, 3.75rem)',
-      minWidth: '2.5rem',
-      minHeight: '2.5rem',
-      maxWidth: '3.75rem',
-      maxHeight: '3.75rem',
-      fontSize: 'clamp(0.52rem, 1.9vw, 0.68rem)',
-      opacity: disabled ? 0.45 : pressed ? 1 : 0.68,
+      width: 'clamp(3rem, 14vw, 4rem)',
+      height: 'clamp(3rem, 14vw, 4rem)',
+      minWidth: '3rem',
+      minHeight: '3rem',
+      fontSize: 'clamp(0.55rem, 2vw, 0.7rem)',
+      opacity: disabled ? 0.45 : pressed ? 1 : 0.75,
       boxShadow: accent ? '0 0 18px rgba(251,146,60,0.22)' : '0 0 12px rgba(15,23,42,0.25)',
+      touchAction: 'none',
+      userSelect: 'none',
     }}
     whileTap={disabled ? undefined : { scale: 0.9, opacity: 1 }}
     animate={{ scale: pressed ? 0.92 : 1 }}

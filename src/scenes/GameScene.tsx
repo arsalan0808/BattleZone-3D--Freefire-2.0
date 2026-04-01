@@ -22,7 +22,7 @@ export const GameScene = memo(() => {
   return (
     <div className="w-full h-screen relative bg-[#070b14]">
       <Canvas
-        className="relative z-0 touch-none"
+        className="relative z-0"
         camera={{ position: [0, 6, 10], fov: 68, near: 0.1, far: 200 }}
         shadows={!mobile}
         dpr={[1, mobile ? 1.25 : 2]}
